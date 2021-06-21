@@ -79,6 +79,8 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 #### ver3 - attribute생성
 ![ver3](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_3.JPG)
 
+### 최종
+![final](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_new.JPG)
 
 ### 기능 요구사항을 커버하는지 검증
 1. 고객이 원하는 일자를 선택하고 예약한다.  --> O
