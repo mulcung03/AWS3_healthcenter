@@ -737,34 +737,6 @@ server:
 
 ```
 
-## spring-boot-starter-security 인증을 활용한 MSA 보호
-
-- gateway > pom.xml 에 spring-boot-starter-security 추가
-```
-		<!-- 인증 추가-->
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-security</artifactId>
-		</dependency>
-```
-
-- gateway 재기동 하여 콘솔 로그에서 비밀번호 확인
-```
-...
-2021-02-22 18:49:49.393  INFO 56079 --- [           main] ctiveUserDetailsServiceAutoConfiguration : 
-
-Using generated security password: 4c9b4f9b-ba47-4ad9-b5c0-9b4a12a89a39
-
-2021-02-22 18:49:49.402  INFO 56079 --- [           main] o.s.c.g.r.RouteDefinitionRouteLocator    : Loaded RoutePredicateFactory [After]
-...
-```
-
-- 포스트맨을 통해 인증 없이 orders/19 상세 조회
-<img width="937" alt="스크린샷 2021-02-22 오후 6 55 40" src="https://user-images.githubusercontent.com/58290368/108692169-a06fc100-753f-11eb-92cc-17c37c7f2ec2.png">
-
-- 포스트맨에서 앞서 확인한 비밀번호 "4c9b4f9b-ba47-4ad9-b5c0-9b4a12a89a39"를 입력 하여 동일한 orders/19 상세 조회
-<img width="945" alt="스크린샷 2021-02-22 오후 6 57 46" src="https://user-images.githubusercontent.com/58290368/108692422-ecbb0100-753f-11eb-9e81-85b58eed57be.png">
-
 # SAGA CQRS 동작 결과
 1. 호텔 예약 발생
 ![order1](https://user-images.githubusercontent.com/76020494/108938712-f05f9c80-7693-11eb-9617-6e6564f9e7ec.png)
