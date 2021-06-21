@@ -73,44 +73,11 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 ![ver1](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_1.JPG)
 
 #### ver2 - relation정의
-
 ![ver2](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_2.JPG)
+
+#### ver3 - attribute생성
+
 ********
-
-#### 2020.12.21
-
-- 1차 완성본
-
-![screenshot-miro com-2020 12 21-13_50_26](https://user-images.githubusercontent.com/76149887/102837515-453a2900-443f-11eb-8293-e7f46bc94732.png)
-
-
-#### 2020.12.22
-
-- 예약 취소 건에 대한 추가 의견으로, 예약 취소는 이력 정보만 남기고 실제 예약 정보는 삭제하는 것으로 합의
-- 예약 취소 시, 예약 취소에 대한 이력만을 저장하기 때문에 이 이력의 저장에 대한 동기 호출로 결제 취소를 하지 않고, 비동기 호출로 전환.
-
-![screenshot-miro com-2020 12 22-10_19_41](https://user-images.githubusercontent.com/76149887/102837538-51be8180-443f-11eb-9fbc-00bec667f053.png)
-
-#### 2021.01.22
-
-- 오더 속성 변경(호텔 서비스인 것을 좀 더 명확하게 드러내려고 호텔아이디와 룸타입으로 변경)
-- 호텔이 확인 하여 예약을 확정한다는 기능 요구사항을 표현 하기 위해 액터(호텔리어), 커맨드(컨펌) 추가. 뷰는 기존의 리저베이션 디테일 위치 이동.  
-
-<img width="643" alt="miro_20210122" src="https://user-images.githubusercontent.com/58290368/105454042-9ea6a980-5cc4-11eb-95bd-439831fc6575.png">
-
-#### 2021.01.25
-
-- MSAEZ 툴에서 이벤트스토밍 작업
-- 사용자 입장에서 꼭 필요할 때만 카카오톡 알림을 받을 수 있도록 카카오 알림 이벤트 발생 최소화
-
-<img width="1346" alt="hotel_msaez_20210125" src="https://user-images.githubusercontent.com/58290368/105668328-70250a80-5f20-11eb-9982-c26b1f9b1fd4.png">
-
-#### 2021.02.22
-
-- MSAEZ 툴에서 이벤트스토밍 작업
-- 마이페이지를 customer로 
-
-![team2hotel](https://user-images.githubusercontent.com/76020494/108933308-429dbf00-768e-11eb-95fd-cc66f136fca8.png)
 
 ### 기능 요구사항을 커버하는지 검증
 1. 고객이 원하는 객실을 선택 하여 예약한다.(O)
