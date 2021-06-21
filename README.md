@@ -74,17 +74,10 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 ## Event Storming
 
-#### 초기 버전
+#### 초기 버전(ver1.)
 
-1. 잘못된 이벤트 제거 : "호텔선택됨", "룸타입선택됨" 등 UI 이벤트 제거 
-pp의 Order, store 의 주문처리, 결제의 결제이력은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌
-2. order의 주문, reservation의 예약과 취소, payment의 결제 이력, 고객관리의 카카오톡 알림 등은 그와 연결된 command 와 event 들에 의하여 트랜잭션이 유지되어야 하는 단위로 그들 끼리 묶어줌(바운디드 컨텍스트)
-3. 도메인 서열 분리 
-   - Core Domain: Order, Reservation(없어서는 안될 핵심 서비스이며, 연견 Up-time SLA 수준을 99.7% 목표, 배포주기는 1주일 1회 미만)
-   - Supporting Domain: customermanagement(경쟁력을 내기위한 서비스이며, SLA 수준은 연간 60% 이상 uptime 목표, 배포주기는 각 팀의 자율)
-   - General Domain: payment(결제서비스로 3rd Party 외부 서비스를 사용하는 것이 경쟁력이 높을 것으로 판단. 향후 External로 전환 필요)
+!https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_1.JPG
 
-![screenshot-miro com-2020 12 18-09_30_35](https://user-images.githubusercontent.com/76149887/102559719-e6f60900-4113-11eb-96c6-54829db72270.png)
 
 #### 2020.12.21
 
