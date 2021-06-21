@@ -45,10 +45,10 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
     -                      
   - [운영](#운영)
     - [CI/CD 설정](#cicd-설정)
-    - [Self Healing(Liveness Probe)](#Self-Healing(Liveness Probe)) 
+    - [Self Healing(Liveness Probe)](#Self-Healing(Liveness-Probe)) 
     - [동기식 호출 / Circuit Breaker](#동기식-호출--Circuit-Breaker) 
     - [오토스케일 아웃](#오토스케일-아웃)
-    - [무정지 재배포(Readiness Probe)](#무정지-배포(Readiness Probe))
+    - [무정지 재배포(Readiness Probe)](#무정지-배포(Readiness-Probe))
     - [ConfigMap / Persistence Volume](#Configmap) 
 
 
