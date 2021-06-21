@@ -435,56 +435,58 @@ Transfer-Encoding: chunked
 
 - 결제서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 ```
-# (app) PaymentService.java
+# (external) PaymentHistoryService.java
 
-package hotel.external;
+package healthcenter.external;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import java.util.Date;
-
 @FeignClient(name="payment", url="${api.payment.url}")
-public interface PaymentService {
+public interface PaymentHistoryService {
 
-    @RequestMapping(method= RequestMethod.POST, path="/payments")
-    public void pay(@RequestBody Payment payment);
+    @RequestMapping(method= RequestMethod.POST, path="/paymentHistories")
+    public void pay(@RequestBody PaymentHistory paymentHistory);
 
-}
+}                      
 ```
 
 - 주문을 받은 직후(@PostPersist) 결제를 요청하도록 처리
 ```
 # Order.java (Entity)
-
     @PostPersist
     public void onPostPersist(){
         Ordered ordered = new Ordered();
         BeanUtils.copyProperties(this, ordered);
         ordered.publishAfterCommit();
 
-        hotel.external.Payment payment = new hotel.external.Payment();
 
-        AppApplication.applicationContext.getBean(hotel.external.PaymentService.class)
+        healthcenter.external.PaymentHistory paymentHistory = new healthcenter.external.PaymentHistory();
+
+        PaymentHistory payment = new PaymentHistory();
+        System.out.println("this.id() : " + this.id);
+        payment.setOrderId(this.id);
+        payment.setStatus("Reservation OK");
+        // mappings goes here
+        OrderApplication.applicationContext.getBean(healthcenter.external.PaymentHistoryService.class)
             .pay(payment);
-
     }
 ```
 
 - 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 결제 시스템이 장애가 나면 주문도 못받는다는 것을 확인:
 ```
-# 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
+# 결제 (payment) 서비스를 잠시 내려놓음 (ctrl+c)
 
 #주문처리
-http localhost:8081/orders hotelId=1002 roomType=delux   
+ http localhost:8081/orders orderType=prime name=jung
 
 #Fail
 HTTP/1.1 500 
 Connection: close
 Content-Type: application/json;charset=UTF-8
-Date: Wed, 24 Feb 2021 00:00:18 GMT
+Date: Mon, 21 Jun 2021 12:45:45 GMT
 Transfer-Encoding: chunked
 
 {
@@ -492,34 +494,36 @@ Transfer-Encoding: chunked
     "message": "Could not commit JPA transaction; nested exception is javax.persistence.RollbackException: Error while committing the transaction",
     "path": "/orders",
     "status": 500,
-    "timestamp": "2021-02-24T00:00:18.829+0000"
+    "timestamp": "2021-06-21T12:45:45.797+0000"
 }
 
+
 #결제서비스 재기동
-cd /Users/imdongbin/Documents/study/MSA/hotel/pay
+cd /home/project/healthcenter/payment
 mvn spring-boot:run
 
 #주문처리
-http localhost:8081/orders hotelId=1002 roomType=delux   
+http localhost:8081/orders orderType=prime name=jung
 
 #Success
 HTTP/1.1 201 
 Content-Type: application/json;charset=UTF-8
-Date: Wed, 24 Feb 2021 00:01:10 GMT
-Location: http://localhost:8081/orders/9
+Date: Mon, 21 Jun 2021 12:47:48 GMT
+Location: http://localhost:8081/orders/2
 Transfer-Encoding: chunked
 
 {
     "_links": {
         "order": {
-            "href": "http://localhost:8081/orders/9"
+            "href": "http://localhost:8081/orders/2"
         },
         "self": {
-            "href": "http://localhost:8081/orders/9"
+            "href": "http://localhost:8081/orders/2"
         }
     },
-    "hotelId": "1002",
-    "roomType": "delux",
+    "cardNo": null,
+    "name": "jung",
+    "orderType": "prime",
     "status": null
 }
 ```
@@ -532,7 +536,7 @@ Transfer-Encoding: chunked
 - 이를 위하여 결제이력에 기록을 남긴 후에 곧바로 결제승인이 되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
  
 ```
-#Payment.java
+#PaymentHistory.java
 
 package hotel;
 
@@ -541,26 +545,26 @@ import org.springframework.beans.BeanUtils;
 import java.util.List;
 
 @Entity
-@Table(name="Payment_table")
-public class Payment {
+@Table(name="PaymentHistory_table")
+public class PaymentHistory {
 
 ...
-
-@PostPersist
+    @PostPersist
     public void onPostPersist(){
-        PayApproved payApproved = new PayApproved();
-        BeanUtils.copyProperties(this, payApproved);
-        payApproved.publishAfterCommit();
+        PaymentApproved paymentApproved = new PaymentApproved();
+        paymentApproved.setStatus("Pay Approved!!");
+        BeanUtils.copyProperties(this, paymentApproved);
+        paymentApproved.publishAfterCommit();
     }
 ```
 
-- 호텔 서비스에서는 결제승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다.
+- 예약서비스에서는 결제승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다.
 - 카톡/이메일 등으로 호텔은 노티를 받고, 예약 상황을 확인 하고, 최종 예약 상태를 UI에 입력할테니, 우선 예약정보를 DB에 받아놓은 후, 이후 처리는 해당 Aggregate 내에서 하면 되겠다.
 
 ```
-# PolicyHandler.java
+# (reservation) PolicyHandler.java
 
-package hotel;
+package healthcenter;
 
 import hotel.config.kafka.KafkaProcessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -572,90 +576,95 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PolicyHandler{
+
+    @Autowired
+    private ReservationRepository reservationRepository;
+	
     @StreamListener(KafkaProcessor.INPUT)
     public void onStringEventListener(@Payload String eventString){
 
     }
 
-    @Autowired
-    ReservationRepository reservationRepository;
-
     @StreamListener(KafkaProcessor.INPUT)
-    public void wheneverPayApproved_(@Payload PayApproved payApproved){
+    public void wheneverPaymentApproved_(@Payload PaymentApproved paymentApproved){
 
-        if(payApproved.isMe()){
-            System.out.println("##### listener  : " + payApproved.toJson());
-            // 결제 승인 되었으니 호텔에 예약 확인 하라고 카톡 알림 처리 필요
+
+        if(paymentApproved.isMe()){
+            System.out.println("##### listener  : " + paymentApproved.toJson());
             Reservation reservation = new Reservation();
-            reservation.setOrderId(payApproved.getOrderId());
-            reservation.setStatus("Confirming reservation");
-
+            reservation.setStatus("Reservation Complete");
+            reservation.setOrderId(paymentApproved.getOrderId());
             reservationRepository.save(reservation);
+            
         }
     }
 
 }
+
+
 ```
 
 예약시스템은 주문/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 예약시스템이 유지보수로 인해 잠시 내려간 상태라도 예약 주문을 받는데 문제가 없어야 한다.
 
 ```
-# 예약 서비스를 잠시 내려놓음 (ctrl+c)
+# (reservation)예약 서비스를 잠시 내려놓음 (ctrl+c)
 
 # 주문처리
-http localhost:8081/orders hotelId=3001 roomType=suite   #Success
+http localhost:8081/orders orderType=prime name=jung   #Success
 
 # 결제처리
-http localhost:8083/payments orderId=11 price=100000 payMethod=card   #Success
+http localhost:8083/paymentHistories orderId=3 price=50000 payMethod=cash   #Success
 
 # 주문 상태 확인
-http localhost:8081/orders/11     
+http localhost:8081/orders/3   
 
 # 주문상태 안바뀜 확인
 HTTP/1.1 200 
 Content-Type: application/hal+json;charset=UTF-8
-Date: Wed, 24 Feb 2021 00:03:23 GMT
+Date: Mon, 21 Jun 2021 12:57:53 GMT
 Transfer-Encoding: chunked
 
 {
     "_links": {
         "order": {
-            "href": "http://localhost:8081/orders/11"
+            "href": "http://localhost:8081/orders/3"
         },
         "self": {
-            "href": "http://localhost:8081/orders/11"
+            "href": "http://localhost:8081/orders/3"
         }
     },
-    "hotelId": "3001",
-    "roomType": "suite",
+    "cardNo": null,
+    "name": "jung",
+    "orderType": "prime",
     "status": null
 }
 
-# hotel 서비스 기동
-cd /Users/imdongbin/Documents/study/MSA/hotel/hotel
+# reservation 서비스 기동
+cd /home/project/healthcenter/reservation
 mvn spring-boot:run
 
 # 주문상태 확인
-http localhost:8081/orders/11
+http localhost:8081/orders/3 
 
-# 주문 상태가 "Confirming reservation"으로 확인
+# 주문 상태가 "Reservation Complete"으로 확인
 HTTP/1.1 200 
 Content-Type: application/hal+json;charset=UTF-8
-Date: Wed, 24 Feb 2021 00:04:03 GMT
+Date: Mon, 21 Jun 2021 13:01:14 GMT
 Transfer-Encoding: chunked
 
 {
     "_links": {
-        "order": {
-            "href": "http://localhost:8081/orders/11"
+        "mypage": {
+            "href": "http://localhost:8084/mypages/5"
         },
         "self": {
-            "href": "http://localhost:8081/orders/11"
+            "href": "http://localhost:8084/mypages/5"
         }
     },
-    "hotelId": "3001",
-    "roomType": "suite",
-    "status": "Confirming reservation"
+    "name": "jung",
+    "orderId": 3,
+    "reservationId": 2,
+    "status": "Reservation Complete"
 }
 ```
 
@@ -664,30 +673,31 @@ Transfer-Encoding: chunked
 API gateway 를 통해 MSA 진입점을 통일 시킨다.
 
 ```
-# gateway 기동(8088 포트)
+# gateway 기동(8080 포트)
 cd gateway
 mvn spring-boot:run
 
 # api gateway를 통한 3001 호텔 standard룸 예약 주문
-http localhost:8088/orders hotelId=3001 roomType=standard
+http localhost:8080/orders orderType=prime name=jung
 
-HTTP/1.1 201 Created
+HTTP/1.1 201 
 Content-Type: application/json;charset=UTF-8
-Date: Mon, 22 Feb 2021 07:36:34 GMT
-Location: http://localhost:8081/orders/13
-transfer-encoding: chunked
+Date: Mon, 21 Jun 2021 12:47:48 GMT
+Location: http://localhost:8081/orders/2
+Transfer-Encoding: chunked
 
 {
     "_links": {
         "order": {
-            "href": "http://localhost:8081/orders/13"
+            "href": "http://localhost:8081/orders/2"
         },
         "self": {
-            "href": "http://localhost:8081/orders/13"
+            "href": "http://localhost:8081/orders/2"
         }
     },
-    "hotelId": "3001",
-    "roomType": "standard",
+    "cardNo": null,
+    "name": "jung",
+    "orderType": "prime",
     "status": null
 }
 ```
@@ -699,7 +709,6 @@ server:
   port: 8080
 
 ---
-
 spring:
   profiles: default
   cloud:
@@ -717,7 +726,7 @@ spring:
           uri: http://localhost:8083
           predicates:
             - Path=/paymentHistories/** 
-        - id: customer
+        - id: notification
           uri: http://localhost:8084
           predicates:
             - Path= /mypages/**
