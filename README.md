@@ -296,35 +296,38 @@ public interface OrderRepository extends PagingAndSortingRepository<Order, Long>
 - 적용 후 REST API 의 테스트 <<수정필요>>
 ```
 # app 서비스의 주문처리
-http localhost:8081/orders hotelId=4001 roomType=delux
+http localhost:8081/orders orderType=basic
 
 # pay 서비스의 결제처리
-http localhost:8083/payments orderId=3 payMethod=card price=100000
+http localhost:8083/paymentHistories orderId=1 price=50000 payMethod=card
 
 # hotel 서비스의 예약처리
-http localhost:8082/reservations orderId=3 status="confirmed"
+http localhost:8082/reservations orderId=1 status="confirmed"
 
-# 주문 상태 확인
+# 주문 상태 확인(mypage)
+
 http localhost:8081/orders/3
-
+root@labs--1428063258:/home/project/healthcenter# http localhost:8084/mypages/1
 HTTP/1.1 200 
 Content-Type: application/hal+json;charset=UTF-8
-Date: Tue, 23 Feb 2021 23:56:54 GMT
+Date: Mon, 21 Jun 2021 10:43:12 GMT
 Transfer-Encoding: chunked
 
 {
     "_links": {
-        "order": {
-            "href": "http://localhost:8081/orders/3"
+        "mypage": {
+            "href": "http://localhost:8084/mypages/1"
         },
         "self": {
-            "href": "http://localhost:8081/orders/3"
+            "href": "http://localhost:8084/mypages/1"
         }
     },
-    "hotelId": "4001",
-    "roomType": "delux",
+    "name": null,
+    "orderId": 1,
+    "reservationId": 3,
     "status": "confirmed"
 }
+
 
 ```
 
@@ -347,49 +350,53 @@ Transfer-Encoding: chunked
 		</dependency>
 
 # 변경/재기동 후 예약 주문
-http localhost:8081/orders hotelId=2001 roomType=standard
-
+ http localhost:8081/orders orderType=basic name=woo
+ 
 HTTP/1.1 201 
 Content-Type: application/json;charset=UTF-8
-Date: Mon, 22 Feb 2021 06:11:15 GMT
-Location: http://localhost:8081/orders/1
+Date: Mon, 21 Jun 2021 10:53:32 GMT
+Location: http://localhost:8081/orders/2
 Transfer-Encoding: chunked
 
 {
     "_links": {
         "order": {
-            "href": "http://localhost:8081/orders/1"
+            "href": "http://localhost:8081/orders/2"
         },
         "self": {
-            "href": "http://localhost:8081/orders/1"
+            "href": "http://localhost:8081/orders/2"
         }
     },
-    "hotelId": "2001",
-    "roomType": "standard",
+    "cardNo": null,
+    "name": "woo",
+    "orderType": "basic",
     "status": null
 }
 
 # 저장이 잘 되었는지 조회
-http localhost:8081/orders/1
+
+http localhost:8084/mypages/2
 
 HTTP/1.1 200 
 Content-Type: application/hal+json;charset=UTF-8
-Date: Mon, 22 Feb 2021 06:17:40 GMT
+Date: Mon, 21 Jun 2021 10:55:04 GMT
 Transfer-Encoding: chunked
 
 {
     "_links": {
-        "order": {
-            "href": "http://localhost:8081/orders/1"
+        "mypage": {
+            "href": "http://localhost:8084/mypages/2"
         },
         "self": {
-            "href": "http://localhost:8081/orders/1"
+            "href": "http://localhost:8084/mypages/2"
         }
     },
-    "hotelId": "2001",
-    "roomType": "standard",
-    "status": null
+    "name": "woo",
+    "orderId": 2,
+    "reservationId": 5,
+    "status": "Reservation Complete"
 }
+
 
 ```
 
@@ -399,30 +406,26 @@ Transfer-Encoding: chunked
 
 ```
 # mypage 호출 
-http localhost:8081/mypages/12
+http localhost:8084/mypages/2
 
 HTTP/1.1 200 
 Content-Type: application/hal+json;charset=UTF-8
-Date: Wed, 24 Feb 2021 00:09:57 GMT
+Date: Mon, 21 Jun 2021 10:56:50 GMT
 Transfer-Encoding: chunked
 
 {
     "_links": {
         "mypage": {
-            "href": "http://localhost:8081/mypages/12"
+            "href": "http://localhost:8084/mypages/2"
         },
         "self": {
-            "href": "http://localhost:8081/mypages/12"
+            "href": "http://localhost:8084/mypages/2"
         }
     },
-    "hotelId": "3001",
-    "orderId": 11,
-    "payMethod": "card",
-    "paymentId": null,
-    "price": 100000,
-    "reservationId": 2,
-    "roomType": "suite",
-    "status": "Confirming reservation"
+    "name": "woo",
+    "orderId": 2,
+    "reservationId": 6,
+    "status": "Reservation Complete"
 }
 ```
 
