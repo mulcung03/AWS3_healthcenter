@@ -1,4 +1,5 @@
-##### 건강검진 예약
+
+# [ 건강검진 예약 ]
 
 Final Project AWS 3차수 - 1팀 제출자료입니다. 
 
@@ -78,6 +79,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 !https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_1.JPG
 
+********
 
 #### 2020.12.21
 
