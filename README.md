@@ -26,7 +26,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 11.Polyglot
 
-12.Self-healing (Liveness Probe)
+12.Self-healing(Liveness Probe)
 
 
 # Table of contents
@@ -37,19 +37,19 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
   - [구현:](#구현)
     - [DDD 의 적용](#ddd-의-적용)
     - [폴리글랏 퍼시스턴스](#폴리글랏-퍼시스턴스)
-    - [폴리글랏 프로그래밍](#폴리글랏-프로그래밍)                         ---11.Polyglot
-    - [동기식 호출 과 Fallback 처리](#동기식-호출-과-Fallback-처리)       ---4.Req/Resp
+    - [폴리글랏 프로그래밍](#폴리글랏-프로그래밍)                         
+    - [동기식 호출 과 Fallback 처리](#동기식-호출-과-Fallback-처리)       
     - [비동기식 호출 과 Eventual Consistency](#비동기식-호출--시간적-디커플링--장애격리--최종-eventual-일관성-테스트)
-    - [API Gateway](#API-게이트웨이-(gateway))                            -- 5.Gateway
-    - [CQRS / Meterialized View](#마이페이지)                           ---2.CQRS
-    - [Saga Pattern / 보상 트랜잭션](#SAGA-CQRS-동작-결과)               ---1.saga
+    - [API Gateway](#API-게이트웨이-(gateway))                            
+    - [SAGA-CQRS](#마이페이지)   
+    -                      
   - [운영](#운영)
     - [CI/CD 설정](#cicd-설정)
-    - [Self Healing](#Self-Healing) --12.Self-healing (Liveness Probe)
-    - [동기식 호출 / 서킷 브레이킹 / 장애격리](#동기식-호출--서킷-브레이킹--장애격리) --7.Circuit Breaker
-    - [오토스케일 아웃](#오토스케일-아웃)     --8.Autoscale (HPA)
-    - [무정지 재배포](#무정지-배포)  --9.Zero-downtime deploy (Readiness Probe)
-    - [ConfigMap / Secret](#Configmap) --10.Config Map/ Persistence Volume
+    - [Self Healing(Liveness Probe)](#Self-Healing(Liveness Probe)) 
+    - [동기식 호출 / Circuit Breaker](#동기식-호출--Circuit-Breaker) 
+    - [오토스케일 아웃](#오토스케일-아웃)
+    - [무정지 재배포(Readiness Probe)](#무정지-배포(Readiness Probe))
+    - [ConfigMap / Persistence Volume](#Configmap) 
 
 
 ## 시나리오
@@ -1019,7 +1019,7 @@ cache:
     - '/root/.m2/**/*'
 ```
 
-## 동기식 호출 / 서킷 브레이킹 / 장애격리
+## 동기식 호출 / Circuit Breaker
 
 * 서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
 
@@ -1127,7 +1127,8 @@ Pod 들의 요청 대비 평균 CPU 사용율 (여기서는 요청이 200 milli-
 #### 부하에 따른 오토스케일 아웃 모니터링
 ![image](https://user-images.githubusercontent.com/17021291/108803415-f4c97e00-75dd-11eb-9fa0-7c01135c551d.png)
 
-## 무정지 배포
+
+## 무정지 배포(Readiness Probe)
 #### 무정지 배포 전 replica 3 scale up
 ![image](https://user-images.githubusercontent.com/17021291/108797620-f0e22f80-75ce-11eb-81db-de7a27574d03.png)
 
