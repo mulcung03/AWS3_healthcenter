@@ -31,7 +31,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 # Table of contents
 
-- [호텔예약](#---)
+- [건강검진예약](#---)
   - [서비스 시나리오](#시나리오)
   - [분석/설계](#분석-설계)
   - [구현:](#구현)
@@ -40,7 +40,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
     - [폴리글랏 프로그래밍](#폴리글랏-프로그래밍)                         ---11.Polyglot
     - [동기식 호출 과 Fallback 처리](#동기식-호출-과-Fallback-처리)       ---4.Req/Resp
     - [비동기식 호출 과 Eventual Consistency](#비동기식-호출--시간적-디커플링--장애격리--최종-eventual-일관성-테스트)
-    - [API Gateway](#API-게이트웨이-gateway)                            -- 5.Gateway
+    - [API Gateway](#API-게이트웨이-(gateway))                            -- 5.Gateway
     - [CQRS / Meterialized View](#마이페이지)                           ---2.CQRS
     - [Saga Pattern / 보상 트랜잭션](#SAGA-CQRS-동작-결과)               ---1.saga
   - [운영](#운영)
@@ -398,35 +398,6 @@ Transfer-Encoding: chunked
 }
 
 
-```
-
-## 마이페이지
-
-고객의 예약정보를 한 눈에 볼 수 있게 mypage를 구현 한다.(CQRS)
-
-```
-# mypage 호출 
-http localhost:8084/mypages/2
-
-HTTP/1.1 200 
-Content-Type: application/hal+json;charset=UTF-8
-Date: Mon, 21 Jun 2021 10:56:50 GMT
-Transfer-Encoding: chunked
-
-{
-    "_links": {
-        "mypage": {
-            "href": "http://localhost:8084/mypages/2"
-        },
-        "self": {
-            "href": "http://localhost:8084/mypages/2"
-        }
-    },
-    "name": "woo",
-    "orderId": 2,
-    "reservationId": 6,
-    "status": "Reservation Complete"
-}
 ```
 
 ## 동기식 호출 과 Fallback 처리
@@ -788,7 +759,36 @@ server:
 # CQRS
 - 고객이 예약건에 대한 Status를 조회할 수 있도록 CQRS로 구현하였음.
 -  mypage 조회를 통해 모든 예약건에 대한 상태정보를 확인할 수 있음.
-실제로 view 페이지를 조회해 보면 모든 room에 대한 전반적인 예약 상태, 결제 상태, 리뷰 건수 등의 정보를 종합
+
+## 마이페이지
+
+고객의 예약정보를 한 눈에 볼 수 있게 mypage를 구현 한다.(CQRS)
+
+```
+# mypage 호출 
+http localhost:8084/mypages/2
+
+HTTP/1.1 200 
+Content-Type: application/hal+json;charset=UTF-8
+Date: Mon, 21 Jun 2021 10:56:50 GMT
+Transfer-Encoding: chunked
+
+{
+    "_links": {
+        "mypage": {
+            "href": "http://localhost:8084/mypages/2"
+        },
+        "self": {
+            "href": "http://localhost:8084/mypages/2"
+        }
+    },
+    "name": "woo",
+    "orderId": 2,
+    "reservationId": 6,
+    "status": "Reservation Complete"
+}
+```
+- 여러개의 리스트 
 ```{
     "_links": {
         "mypage": {
