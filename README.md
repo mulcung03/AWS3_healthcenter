@@ -186,26 +186,58 @@ netstat -anlp | grep :808
 
 ## DDD 의 적용
 
-- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (예시는 pay 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 예를 들어 price, payMethod 등)
-
+- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: 
+- (예시는 order 마이크로 서비스).
 ```
-package hotel;
+package healthcenter;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
-import java.util.List;
+
+import healthcenter.external.PaymentHistory;
 
 @Entity
-@Table(name="Payment_table")
-public class Payment {
+@Table(name="Order_table")
+public class Order {
 
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
-    private Long orderId;
+    private String orderType;
+    private Long cardNo;
+    private String name;
     private String status;
-    private Integer price;
-    private String payMethod;
+
+    @PostPersist
+    public void onPostPersist(){
+        Ordered ordered = new Ordered();
+        BeanUtils.copyProperties(this, ordered);
+        ordered.publishAfterCommit();
+
+        //Following code causes dependency to external APIs
+        // it is NOT A GOOD PRACTICE. instead, Event-Policy mapping is recommended.
+
+        PaymentHistory payment = new PaymentHistory();
+        System.out.println("this.id() : " + this.id);
+        payment.setOrderId(this.id);
+        payment.setStatus("Reservation OK");
+        // mappings goes here
+        OrderApplication.applicationContext.getBean(healthcenter.external.PaymentHistoryService.class)
+            .pay(payment);
+
+
+    }
+
+    @PostUpdate
+    public void onPostUpdate(){
+    	System.out.println("Order Cancel  !!");
+        OrderCanceled orderCanceled = new OrderCanceled();
+        BeanUtils.copyProperties(this, orderCanceled);
+        orderCanceled.publishAfterCommit();
+
+
+    }
+
 
     public Long getId() {
         return id;
@@ -214,12 +246,29 @@ public class Payment {
     public void setId(Long id) {
         this.id = id;
     }
-    public Long getOrderId() {
-        return orderId;
+    public String getOrderType() {
+        return orderType;
     }
 
-    public void setOrderId(Long orderId) {
-        this.orderId = orderId;
+    public void setOrderType(String orderType) {
+        this.orderType = orderType;
+    }
+    public Long getCardNo() {
+        return cardNo;
+    }
+
+    public void setCardNo(Long cardNo) {
+        this.cardNo = cardNo;
+    }
+
+
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
     public String getStatus() {
         return status;
@@ -228,36 +277,23 @@ public class Payment {
     public void setStatus(String status) {
         this.status = status;
     }
-    public Integer getPrice() {
-        return price;
-    }
-
-    public void setPrice(Integer price) {
-        this.price = price;
-    }
-    public String getPayMethod() {
-        return payMethod;
-    }
-
-    public void setPayMethod(String payMethod) {
-        this.payMethod = payMethod;
-    }
 
 }
+
 ```
 
-- Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
+- Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 
+데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
 ```
-package hotel;
+package healthcenter;
 
 import org.springframework.data.repository.PagingAndSortingRepository;
 
-public interface PaymentRepository extends PagingAndSortingRepository<Payment, Long>{
-
+public interface OrderRepository extends PagingAndSortingRepository<Order, Long>{
 }
 ```
 
-- 적용 후 REST API 의 테스트
+- 적용 후 REST API 의 테스트 <<수정필요>>
 ```
 # app 서비스의 주문처리
 http localhost:8081/orders hotelId=4001 roomType=delux
@@ -292,10 +328,9 @@ Transfer-Encoding: chunked
 
 ```
 
-## 폴리글랏 퍼시스턴스
+## 폴리글랏 퍼시스턴스 <<수정필요>>
 
 폴리그랏 퍼시스턴스 요건을 만족하기 위해 기존 h2를 hsqldb로 변경
-https://www.baeldung.com/spring-boot-hsqldb 참고
 
 ```
 <!--		<dependency>-->
@@ -488,7 +523,8 @@ Transfer-Encoding: chunked
 
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
 
-결제가 이루어진 후에 호텔 시스템으로 이를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 호텔 시스템의 처리를 위하여 결제주문이 블로킹 되지 않아도록 처리한다.
+결제가 이루어진 후에 센터예약 시스템으로 이를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 
+예약 시스템의 처리를 위하여 결제주문이 블로킹 되지 않도록 처리
  
 - 이를 위하여 결제이력에 기록을 남긴 후에 곧바로 결제승인이 되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
  
@@ -558,10 +594,10 @@ public class PolicyHandler{
 }
 ```
 
-호텔 시스템은 주문/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 호텔 시스템이 유지보수로 인해 잠시 내려간 상태라도 예약 주문을 받는데 문제가 없어야 한다.
+예약시스템은 주문/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 예약시스템이 유지보수로 인해 잠시 내려간 상태라도 예약 주문을 받는데 문제가 없어야 한다.
 
 ```
-# 호텔 서비스 (hotel) 를 잠시 내려놓음 (ctrl+c)
+# 예약 서비스를 잠시 내려놓음 (ctrl+c)
 
 # 주문처리
 http localhost:8081/orders hotelId=3001 roomType=suite   #Success
@@ -751,6 +787,8 @@ server:
 ![cancel_kafka](https://user-images.githubusercontent.com/76020494/108938746-fbb2c800-7693-11eb-9566-62a9498e015a.png)
 6. 취소 상태 Mypage 확인
 ![cancel_mypage](https://user-images.githubusercontent.com/76020494/108938753-fd7c8b80-7693-11eb-8016-4b00100def94.png)
+
+
 
 # 운영
 
