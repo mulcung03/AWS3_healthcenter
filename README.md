@@ -8,7 +8,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 2.CQRS
 
-**3.Correlation**
+3.Correlation
 
 4.Req/Resp
 
@@ -331,7 +331,7 @@ Transfer-Encoding: chunked
 
 ```
 
-## 폴리글랏 퍼시스턴스 <<수정필요>>
+## 폴리글랏 퍼시스턴스
 
 폴리그랏 퍼시스턴스 요건을 만족하기 위해 기존 h2를 hsqldb로 변경
 
@@ -785,23 +785,39 @@ server:
 
 ```
 
-# SAGA CQRS 동작 결과
-1. 호텔 예약 발생
-![order1](https://user-images.githubusercontent.com/76020494/108938712-f05f9c80-7693-11eb-9617-6e6564f9e7ec.png)
-2. 예약 KAFKA 메시지 확인
-![order_kafka](https://user-images.githubusercontent.com/76020494/108938721-f3f32380-7693-11eb-92f5-6257ba18faf6.png)
-3. 예약 내역 Mypage 확인 
-![order_mypage](https://user-images.githubusercontent.com/76020494/108938732-f6557d80-7693-11eb-88db-93933a6182e2.png)
-
-4. 취소 발생
-![cancel](https://user-images.githubusercontent.com/76020494/108938741-fa819b00-7693-11eb-8d97-9f549685cada.png)
-5. 취소 KAFKA 메시지 확인
-![cancel_kafka](https://user-images.githubusercontent.com/76020494/108938746-fbb2c800-7693-11eb-9566-62a9498e015a.png)
-6. 취소 상태 Mypage 확인
-![cancel_mypage](https://user-images.githubusercontent.com/76020494/108938753-fd7c8b80-7693-11eb-8016-4b00100def94.png)
-
-
-
+# CQRS
+- 고객이 예약건에 대한 Status를 조회할 수 있도록 CQRS로 구현하였음.
+-  mypage 조회를 통해 모든 예약건에 대한 상태정보를 확인할 수 있음.
+실제로 view 페이지를 조회해 보면 모든 room에 대한 전반적인 예약 상태, 결제 상태, 리뷰 건수 등의 정보를 종합
+```{
+    "_links": {
+        "mypage": {
+            "href": "http://localhost:8084/mypages/5"
+        },
+        "self": {
+            "href": "http://localhost:8084/mypages/5"
+        }
+    },
+    "name": "jung",
+    "orderId": 3,
+    "reservationId": 2,
+    "status": "Reservation Complete"
+},
+{
+    "_links": {
+        "mypage": {
+            "href": "http://localhost:8084/mypages/2"
+        },
+        "self": {
+            "href": "http://localhost:8084/mypages/2"
+        }
+    },
+    "name": "woo",
+    "orderId": 2,
+    "reservationId": 6,
+    "status": "Reservation Complete"
+}
+```
 # 운영
 
 ## CI/CD 설정
