@@ -110,28 +110,49 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
    - 고객이 예약 확인 상태를 마이페이지에서 확인할 수 있어야 한다. `CQRS`
    - 예약 상태가 바뀔 때 마다 SMS로 알림이 발송되어야 한다.
 
-******
-## 헥사고날 아키텍처 다이어그램 도출
-- 비지니스 로직은 내부에 순수한 형태로 구현
-- 그 이외의 것을 어댑터 형식으로 설계 하여 해당 비지니스 로직이 어느 환경에서도 잘 도작하도록 설계
 
-![event_stream](https://user-images.githubusercontent.com/76020494/108794206-b07fb300-75c8-11eb-9f97-9a4e1695588c.png)
+## 구현
+분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현.
+각 서비스 별로 포트넘버 부여 확인 ( 8081 ~ 8084 )
 
-# 구현
-분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 8084 이다)
-
+###포트넘버 분리
 ```
-cd /Users/imdongbin/Documents/study/MSA/hotel/app
+spring:
+  profiles: default
+  cloud:
+    gateway:
+      routes:
+        - id: notification
+          uri: http://localhost:8081
+          predicates:
+            - Path= /myPages/**
+        - id: payment
+          uri: http://localhost:8082
+          predicates:
+            - Path=/payments/** 
+        - id: reservation
+          uri: http://localhost:8083
+          predicates:
+            - Path=/reservations/** 
+        - id: order
+          uri: http://localhost:8084
+          predicates:
+            - Path=/orders/** 
+```
+
+### 각 서비스를 수행
+```
+cd /home/project/health_center/order
 mvn spring-boot:run
 
-cd /Users/imdongbin/Documents/study/MSA/hotel/hotel
-mvn spring-boot:run 
+cd /home/project/health_center/payment
+mvn spring-boot:run
 
-cd /Users/imdongbin/Documents/study/MSA/hotel/pay
-mvn spring-boot:run  
+cd /home/project/health_center/reservation
+mvn spring-boot:run
 
-cd /Users/imdongbin/Documents/study/MSA/hotel/customer
-mvn spring-boot:run 
+cd /home/project/health_center/notification
+mvn spring-boot:run
 ```
 
 ## DDD 의 적용
