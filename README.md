@@ -75,9 +75,11 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 ## Event Storming
 
-#### 초기 버전(ver1.)
-
-!https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_1.JPG
+#### 초기 버전(ver1
+ - MSAEZ 툴에서 이벤트스토밍 작업
+ - 업무별 담당자를 분배하여 각 도메인별 command,event,aggregate,policy를 도출
+ - 이후 java소스로의 컨버전을 고려하여 네이밍을 영문 대문자로 시작하는 것으로 명칭변경 적용
+![ver1](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_1.JPG)
 
 ********
 
