@@ -149,22 +149,22 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: notification
+        - id: order
           uri: http://localhost:8081
           predicates:
-            - Path= /myPages/**
-        - id: payment
+            - Path=/orders/** 
+        - id: reservation
           uri: http://localhost:8082
           predicates:
-            - Path=/payments/** 
-        - id: reservation
+            - Path=/reservations/**,/cancellations/** 
+        - id: payment
           uri: http://localhost:8083
           predicates:
-            - Path=/reservations/** 
-        - id: order
+            - Path=/paymentHistories/** 
+        - id: customer
           uri: http://localhost:8084
           predicates:
-            - Path=/orders/** 
+            - Path= /mypages/**
 ```
 
 ### 각 서비스를 수행
