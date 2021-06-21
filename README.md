@@ -74,6 +74,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 #### ver2 - relation정의
 
+![ver2](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/storming_2.JPG)
 ********
 
 #### 2020.12.21
