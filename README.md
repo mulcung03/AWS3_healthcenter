@@ -1141,6 +1141,24 @@ kubectl set image deploy order order=새로운 이미지 버전
 ![image](https://user-images.githubusercontent.com/17021291/108806577-6f49cc00-75e5-11eb-99c8-8904c9995186.png)
 
 ## Self Healing(Liveness Probe)
+- room deployment.yml 파일 수정 
+```
+콘테이너 실행 후 /tmp/healthy 파일을 만들고 
+90초 후 삭제
+livenessProbe에 'cat /tmp/healthy'으로 검증하도록 함
+```
+![deployment yml tmp healthy](https://user-images.githubusercontent.com/38099203/119318677-8ff0f300-bcb4-11eb-950a-e3c15feed325.PNG)
+
+- kubectl describe pod room -n airbnb 실행으로 확인
+```
+컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 됨
+pod 정상 상태 일때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지됨
+```
+
+![get pod tmp healthy](https://user-images.githubusercontent.com/38099203/119318781-a9923a80-bcb4-11eb-9783-65051ec0d6e8.PNG)
+![touch tmp healthy](https://user-images.githubusercontent.com/38099203/119319050-f118c680-bcb4-11eb-8bca-aa135c1e067e.PNG)
+
+
 
 ## Configmap
 - configmap 생성  
