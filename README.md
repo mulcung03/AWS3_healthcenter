@@ -294,7 +294,7 @@ public interface OrderRepository extends PagingAndSortingRepository<Order, Long>
 }
 ```
 
-- 적용 후 REST API 의 테스트 <<수정필요>>
+- 적용 후 REST API 의 테스트
 ```
 # app 서비스의 주문처리
 http localhost:8081/orders orderType=basic
