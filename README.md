@@ -992,6 +992,7 @@ reservation   1/4     1            0           5m12s
 reservation   1/4     1            0           5m12s
 reservation   2/4     1            0           5m12s
 ```
+--> 수정필요. AVAILABLE이 올라오는지 확인되어야 한다. 
 ```
 Lifting the server siege...
 Transactions:                  38354 hits
@@ -1075,6 +1076,19 @@ root@siege:/# siege -c1 -t60S -v http://payment:8080/payment   ==> 60초 설정
 ![4](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/4.PNG)
 ![5](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/5.PNG)
 --> 수정필요. paymentHistory로 해서 날린걸로 변경했어야함. not found증적임. 
+--> 수정한 증적은 아래...
+```
+HTTP/1.1 200     0.01 secs:    6788 bytes ==> GET  /paymentHistories
+HTTP/1.1 200     0.01 secs:    6788 bytes ==> GET  /paymentHistories
+HTTP/1.1 200     0.00 secs:    6788 bytes ==> GET  /paymentHistories
+HTTP/1.1 200     0.01 secs:    6788 bytes ==> GET  /paymentHistories
+HTTP/1.1 200     0.00 secs:    6788 bytes ==> GET  /paymentHistories
+
+Lifting the server siege...
+Transactions:                   9379 hits
+Availability:                 100.00 %
+Elapsed time:                  59.27 secs
+```
 
 
 ## Self Healing(Liveness Probe)
