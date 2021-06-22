@@ -620,10 +620,8 @@ Transfer-Encoding: chunked
 cd /home/project/healthcenter/reservation
 mvn spring-boot:run
 
-# 주문상태 확인
-http localhost:8081/orders/3 
+# 주문상태 확인(mypage) : 주문 상태가 "Reservation Complete"으로 확인
 
-# 주문 상태가 "Reservation Complete"으로 확인
 HTTP/1.1 200 
 Content-Type: application/hal+json;charset=UTF-8
 Date: Mon, 21 Jun 2021 13:01:14 GMT
@@ -654,7 +652,7 @@ API gateway 를 통해 MSA 진입점을 통일 시킨다.
 cd gateway
 mvn spring-boot:run
 
-# api gateway를 통한 3001 호텔 standard룸 예약 주문
+# api gateway를 통한 prime 타입의 검진예약주문
 http localhost:8080/orders orderType=prime name=jung
 
 HTTP/1.1 201 
@@ -822,6 +820,7 @@ Transfer-Encoding: chunked
     "status": "Reservation Complete"
 }
 ```
+
 # 운영
 
 ## 컨테이너 이미지 생성 및 배포
@@ -924,7 +923,8 @@ Transfer-Encoding: chunked
 
 시나리오는 단말앱(app)-->결제(pay) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 결제 요청이 과도할 경우 CB 를 통하여 장애격리.
 
-- Hystrix 를 설정:  요청처리 쓰레드에서 처리시간이 610 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
+- Hystrix 를 설정:  요청처리 쓰레드에서 처리시간이 300 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
+- 임의의 부하처리를 위해 결제서비스내 sleep을 random하게 적용하였다.
 ```
 # app 서비스, application.yml
 
@@ -944,56 +944,22 @@ hystrix:
   command:
     # 전역설정
     default:
-      execution.isolation.thread.timeoutInMilliseconds: 610
+      execution.isolation.thread.timeoutInMilliseconds: 300
 
 ```
 
-- 피호출 서비스(결제:pay) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
-```
-# (pay) Payment.java (Entity)
-
-    @PrePersist
-    public void onPrePersist(){
-
-        if("cancle".equals(payMethod)) {
-            // 예시 푸드 딜리버리처럼 행위 필드를 하나 더 추가 하려다가 payMethod에 cancle 들어오면 취소 요청인 것으로 정의
-            PayCanceled payCanceled = new PayCanceled();
-            BeanUtils.copyProperties(this, payCanceled);
-            payCanceled.publish();
-        } else {
-            PayApproved payApproved = new PayApproved();
-            BeanUtils.copyProperties(this, payApproved);
-
-            // 바로 이벤트를 보내버리면 주문정보가 커밋되기도 전에 예약 상태 변경 이벤트가 발송되어 주문테이블의 상태가 바뀌지 않을 수 있다.
-            // TX 리스너는 커밋이 완료된 후에 이벤트를 발생하도록 만들어준다.
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronizationAdapter() {
-                @Override
-                public void beforeCommit(boolean readOnly) {
-                    payApproved.publish();
-                }
-            });
-
-            try { // 피호출 서비스(결제:pay) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
-                Thread.currentThread().sleep((long) (400 + Math.random() * 220));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-        }
-    }
-```
 
 * 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
 - 동시사용자 100명
 - 60초 동안 실시
 
 ```
-siege -c100 -t60S -r10 --content-type "application/json" 'http://localhost:8081/orders POST {"hotelId": "4001", "roomType": "standard"}'
+siege -c100 -t60S -r10 --content-type "application/json" 'http://localhost:8081/orders POST {"orderId": "11", "orderType": "prime"}'
 
 defaulting to time-based testing: 60 seconds
 
 {	"transactions":			        1054,
-	"availability":			       80.34,
+	"availability":			       84.27,
 	"elapsed_time":			       59.74,
 	"data_transferred":		        0.30,
 	"response_time":		        5.47,
@@ -1007,13 +973,18 @@ defaulting to time-based testing: 60 seconds
 }
 
 ```
-- 80.34% 성공, 19.66% 실패
+- 84.27% 성공, 15.73% 실패
+
+
+
+
 
 ## 오토스케일 아웃
 -앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
-•	reservation deployment.yml 파일에 resources 설정을 추가한다 
+#### reservation deployment.yml 파일에 resources 설정을 추가한다 
 ![1](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/1.PNG)
-•	payment 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 
+
+#### reservation 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 
 설정은 CPU 사용량이 50프로를 넘어서면 replica 를 10개까지 늘려준다:
 kubectl autoscale deployment reservation -n healthcenter --cpu-percent=50 --min=1 --max=10
 ```
@@ -1022,16 +993,16 @@ root@labs--244363308:/home/project# kubectl autoscale deployment reservation -n 
 horizontalpodautoscaler.autoscaling/reservation autoscaled
 ```
 
-•	부하를 동시사용자 100명, 1분 동안 걸어준다.
+#### 부하를 동시사용자 100명, 1분 동안 걸어준다.
 ```
 root@siege:/# siege –c200 -t60S -v --content-type "application/json" 'http://reservation:8080/reservations POST {"orderId": "12345"}'
 ```
-•	오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
+#### 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
 ```
 # kubectl get deploy reservation -w -n healthcenter
 ```
 
-•	어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다
+#### 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다
 ```
 root@labs--244363308:/home/project# kubectl get deploy reservation -w -n healthcenter
 NAME          READY   UP-TO-DATE   AVAILABLE   AGE
