@@ -37,7 +37,8 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
   - [구현:](#구현)
     - [DDD 의 적용](#ddd-의-적용)
     - [폴리글랏 퍼시스턴스](#폴리글랏-퍼시스턴스)
-    - [폴리글랏 프로그래밍](#폴리글랏-프로그래밍)                         
+    - [폴리글랏 프로그래밍](#폴리글랏-프로그래밍)
+    - [Correlation](#Corrlation)                         
     - [동기식 호출 과 Fallback 처리](#동기식-호출-과-Fallback-처리)       
     - [비동기식 호출 과 Eventual Consistency](#비동기식-호출--시간적-디커플링--장애격리--최종-eventual-일관성-테스트)
     - [API Gateway](#API-게이트웨이-(gateway))                            
@@ -332,6 +333,10 @@ Transfer-Encoding: chunked
 ```
 
 ## 폴리글랏 퍼시스턴스
+비지니스 로직은 내부에 순수한 형태로 구현
+그 이외의 것을 어댑터 형식으로 설계 하여 해당 비지니스 로직이 어느 환경에서도 잘 도작하도록 설계
+
+![polyglot](https://user-images.githubusercontent.com/76020494/108794206-b07fb300-75c8-11eb-9f97-9a4e1695588c.png)
 
 폴리그랏 퍼시스턴스 요건을 만족하기 위해 기존 h2를 hsqldb로 변경
 
@@ -399,6 +404,8 @@ Transfer-Encoding: chunked
 
 
 ```
+
+
 
 ## 동기식 호출 과 Fallback 처리
 
