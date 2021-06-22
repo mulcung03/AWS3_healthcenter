@@ -1011,54 +1011,155 @@ defaulting to time-based testing: 60 seconds
 - 80.34% 성공, 19.66% 실패
 
 ## 오토스케일 아웃
-#### 사전 작업
-1. metric server 설치 - kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.7/components.yaml
-2. Resource Request/Limit 설정
-![image](https://user-images.githubusercontent.com/17021291/108804593-09f3dc00-75e1-11eb-9505-6d2140b61d00.png)
-3. HPA 설정 - kubectl autoscale deployment payment --cpu-percent=50 --min=1 --max=10 cpu-percent=50 -n teamtwohotel  
+-----------------------
+-앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
+•	reservation deployment.yml 파일에 resources 설정을 추가한다 
+![1]()
+•	payment 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 
+설정은 CPU 사용량이 50프로를 넘어서면 replica 를 10개까지 늘려준다:
+kubectl autoscale deployment reservation -n healthcenter --cpu-percent=50 --min=1 --max=10
+```
+root@labs--244363308:/home/project# kubectl autoscale deployment reservation -n healthcenter --cpu-percent=50 --min=1 --max=10
 
-Pod 들의 요청 대비 평균 CPU 사용율 (여기서는 요청이 200 milli-cores이므로, 모든 Pod의 평균 CPU 사용율이 100 milli-cores(50%)를 넘게되면 HPA 발생)"
+horizontalpodautoscaler.autoscaling/reservation autoscaled
+```
 
-#### Siege 도구 활용한 부하(Stress) 주기
-1. siege 설치 - kubectl create -f siege.yaml
-2. siege 접속 - kubectl exec -it siege -- /bin/bash
-![image](https://user-images.githubusercontent.com/17021291/108792500-c1c6c080-75c4-11eb-8d9b-718f7c030de3.png)
+•	부하를 동시사용자 100명, 1분 동안 걸어준다.
+```
+root@siege:/# siege –c200 -t60S -v --content-type "application/json" 'http://reservation:8080/reservations POST {"orderId": "12345"}'
+```
+•	오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
+# kubectl get deploy reservation -w -n healthcenter
 
-#### 부하에 따른 오토스케일 아웃 모니터링
-![image](https://user-images.githubusercontent.com/17021291/108803415-f4c97e00-75dd-11eb-9fa0-7c01135c551d.png)
+•	어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다
+```
+root@labs--244363308:/home/project# kubectl get deploy reservation -w -n healthcenter
+NAME          READY   UP-TO-DATE   AVAILABLE   AGE
+reservation   1/1     1            0           4m24s
+reservation   1/4     1            0           5m12s
+reservation   1/4     1            0           5m12s
+reservation   1/4     1            0           5m12s
+```
+```
+Lifting the server siege...
+Transactions:                  38354 hits
+Availability:                 100.00 %
+Elapsed time:                  59.76 secs
+Data transferred:               8.56 MB
+Response time:                  0.04 secs
+Transaction rate:             641.80 trans/sec
+Throughput:                     0.14 MB/sec
+Concurrency:                   24.94
+Successful transactions:       38354
+Failed transactions:               0
+Longest transaction:            0.41
+Shortest transaction:           0.00
+```
 
+--------------
 
 ## 무정지 배포(Readiness Probe)
-#### 무정지 배포 전 replica 3 scale up
-![image](https://user-images.githubusercontent.com/17021291/108797620-f0e22f80-75ce-11eb-81db-de7a27574d03.png)
+- 무정지 배포 전 payment 서비스의 STATUS 가 Running 및 1/1 인 것을 확인한다. 
+```
+root@labs--244363308:/home/project# kubectl get pod
+NAME                           READY   STATUS             RESTARTS   AGE
+order-5884c9fc47-sgh7r         0/1     ImagePullBackOff   0          29m
+payment-555696c874-6l7wq       1/1     Running            0          5m12s
+payment-555696c874-pgxrr       1/1     Running            0          40m
+payment-555696c874-tp72c       1/1     Running            0          5m12s
+reservation-65ff4b4974-sbbm6   1/1     Running            0          31m
+```
+#### Readiness 설정 
+-	Readiness 설정 내용 확인
+```
+root@labs--244363308:/home/project# kubectl describe deploy payment -n healthcenter
+Name:                   payment
+Namespace:              healthcenter
+CreationTimestamp:      Mon, 21 Jun 2021 13:02:37 +0000
+Labels:                 app=order
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=payment
+Replicas:               1 desired | 1 updated | 1 total | 0 available | 1 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=payment
+  Containers:
+   payment:
+    Image:      740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/payment:v1
+    Port:       8080/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:  500m
+    Requests:
+      cpu:        200m
+    Liveness:     http-get http://:8080/actuator/health delay=120s timeout=2s period=5s #success=1 #failure=5
+    Readiness:    http-get http://:8080/actuator/health delay=10s timeout=2s period=5s #success=1 #failure=10
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      False   MinimumReplicasUnavailable
+  Progressing    False   ProgressDeadlineExceeded
+OldReplicaSets:  <none>
+NewReplicaSet:   payment-55f44fbc85 (1/1 replicas created)
+Events:          <none>
+```
 
-#### Readiness 설정
-![image](https://user-images.githubusercontent.com/17021291/108806467-18dc8d80-75e5-11eb-822a-3c187cb7ffcc.png)
+#### 부하테스트 siege pod 설치 및 실행
 
-#### Rolling Update
-kubectl set image deploy order order=새로운 이미지 버전
-![image](https://user-images.githubusercontent.com/17021291/108797739-461e4100-75cf-11eb-96fc-959f48dc17c0.png)
+![2]()
 
-#### siege로 무중단 확인
-![image](https://user-images.githubusercontent.com/17021291/108806577-6f49cc00-75e5-11eb-99c8-8904c9995186.png)
+충분한 시간만큼 부하를 주고,
+그 사이 새로운 image 를 반영후 deployment.yml을 배포
+Siege 로그를 보면서 배포 시 무정지로 배포되는 것을 확인.
+
+root@siege:/# siege -c1 -t60S -v http://payment:8080/payment   ==> 60초 설정
+![3]()
+![4]()
+--------------
+
 
 ## Self Healing(Liveness Probe)
-- room deployment.yml 파일 수정 
-```
-콘테이너 실행 후 /tmp/healthy 파일을 만들고 
-90초 후 삭제
-livenessProbe에 'cat /tmp/healthy'으로 검증하도록 함
-```
-![deployment yml tmp healthy](https://user-images.githubusercontent.com/38099203/119318677-8ff0f300-bcb4-11eb-950a-e3c15feed325.PNG)
+- deployment.yml 을 /tmp/healthy 파일을 만들고 90초 후 삭제 후 
+livenessProbe에 /tmp/healthy 파일이 존재하는지 재확인하는 설정값을 추가
+- periodSeconds 값으로 3초마다/tmp/healthy 파일의 존재 여부를 조회
+- 파일이 존재하지 않을 경우, 정상 작동에 문제가 있다고 판단되어 kubelet에 의해 자동으로 컨테이너가 재시작
 
-- kubectl describe pod room -n airbnb 실행으로 확인
+#### reservation deployment.yml 파일 수정
+![5]()
+#### 설정 수정된 상태 확인
 ```
-컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 됨
-pod 정상 상태 일때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지됨
+# kubectl describe pod reservation -n healthcenter
+```
+![6]()
+
+컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 되고, pod 정상 상태 일 때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지 확인
+
+```
+# kubectl get po –n healthcenter –w
 ```
 
-![get pod tmp healthy](https://user-images.githubusercontent.com/38099203/119318781-a9923a80-bcb4-11eb-9783-65051ec0d6e8.PNG)
-![touch tmp healthy](https://user-images.githubusercontent.com/38099203/119319050-f118c680-bcb4-11eb-8bca-aa135c1e067e.PNG)
+```
+root@labs--244363308:/home/project# kubectl get po -n healthcenter -w
+NAME                              READY   STATUS              RESTARTS   AGE
+efs-provisioner-f4f7b5d64-zfkpg   0/1     ContainerCreating   0          39m
+notification-57cb4df96b-2h4w9     1/1     Running             111        9h
+order-647ccdbcd5-z5txt            1/1     Running             0          83s
+payment-d48bfc5f9-mmn2m           1/1     Running             3          53m
+reservation-857df7bfd8-wvb4c      1/1     Running             5          8m19s
+siege                             1/1     Running             0          10h
+reservation-857df7bfd8-wvb4c      0/1     Running             6          8m27s
+reservation-857df7bfd8-wvb4c      1/1     Running             6          8m52s
+reservation-857df7bfd8-wvb4c      0/1     OOMKilled            6          9m52s
+reservation-857df7bfd8-wvb4c      0/1     Running             7          12m
+reservation-857df7bfd8
+
+```
+
 
 ## Config Map/Persistence Volume
 - Persistence Volume
