@@ -50,7 +50,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
     - [오토스케일 아웃](#오토스케일-아웃)
     - [무정지 재배포(Readiness Probe)](#무정지-배포(Readiness-Probe))
     - [Self Healing(Liveness Probe)](#Self-Healing(Liveness-Probe))
-    - [ConfigMap / Persistence Volume](#Configmap) 
+    - [ConfigMap / Persistence Volume](#Config-Map/Persistence-Volume) 
 
 
 ## 시나리오
@@ -1060,102 +1060,268 @@ pod 정상 상태 일때 pod 진입하여 /tmp/healthy 파일 생성해주면 �
 ![get pod tmp healthy](https://user-images.githubusercontent.com/38099203/119318781-a9923a80-bcb4-11eb-9783-65051ec0d6e8.PNG)
 ![touch tmp healthy](https://user-images.githubusercontent.com/38099203/119319050-f118c680-bcb4-11eb-8bca-aa135c1e067e.PNG)
 
+## Config Map/Persistence Volume
+- Persistence Volume
 
-
-## Configmap
-- configmap 생성  
-  > kubectl create configmap my-config --from-literal=key1=value1 --from-literal=key2=value2
-- configmap 정보 가져오기  
-  > kubectl get configmaps my-config -o yaml  
-
-- 파일로부터 configmap 생성 (configmap.yml 생성)
+1: EFS 생성
 ```
+EFS 생성 시 클러스터의 VPC를 선택해야함
+```
+![클러스터의 VPC를 선택해야함](https://github.com/JiHye77/AWS3_healthcenter/blob/main/refer/1%20vpc.JPG)
+![EFS생성](https://github.com/JiHye77/AWS3_healthcenter/blob/main/refer/2%20filesystem.JPG)
+
+2. EFS 계정 생성 및 ROLE 바인딩
+```
+kubectl apply -f efs-sa.yml
+!(https://github.com/JiHye77/AWS3_healthcenter/blob/main/refer/3.%20efs-sa.JPG)
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: efs-provisioner
+  namespace: healthcenter
+
+
+kubectl get ServiceAccount efs-provisioner -n healthcenter
+NAME              SECRETS   AGE
+efs-provisioner   1         101s
+  
+  
+  
+kubectl apply -f efs-rbac.yaml
+!(https://github.com/JiHye77/AWS3_healthcenter/blob/main/refer/4%20efs_rbac.JPG)
+  
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: efs-provisioner-runner
+  namespace: healthcenter
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "update", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: run-efs-provisioner
+  namespace: healthcenter
+subjects:
+  - kind: ServiceAccount
+    name: efs-provisioner
+     # replace with namespace where provisioner is deployed
+    namespace: healthcenter
+roleRef:
+  kind: ClusterRole
+  name: efs-provisioner-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-efs-provisioner
+  namespace: healthcenter
+rules:
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: leader-locking-efs-provisioner
+  namespace: healthcenter
+subjects:
+  - kind: ServiceAccount
+    name: efs-provisioner
+    # replace with namespace where provisioner is deployed
+    namespace: healthcenter
+roleRef:
+  kind: Role
+  name: leader-locking-efs-provisioner
+  apiGroup: rbac.authorization.k8s.io
+
+
+```
+
+3. EFS Provisioner 배포
+```
+kubectl apply -f efs-provisioner-deploy.yml
+!(https://github.com/JiHye77/AWS3_healthcenter/blob/main/refer/5%20proviosioner.JPG)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: efs-provisioner
+  namespace: healthcenter
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: efs-provisioner
+  template:
+    metadata:
+      labels:
+        app: efs-provisioner
+    spec:
+      serviceAccount: efs-provisioner
+      containers:
+        - name: efs-provisioner
+          image: quay.io/external_storage/efs-provisioner:latest
+          env:
+            - name: FILE_SYSTEM_ID
+              value: fs-562f9c36
+            - name: AWS_REGION
+              value: ap-northeast-2
+            - name: PROVISIONER_NAME
+              value: my-aws.com/aws-efs
+          volumeMounts:
+            - name: pv-volume
+              mountPath: /persistentvolumes
+      volumes:
+        - name: pv-volume
+          nfs:
+            server: fs-562f9c36.efs.ap-northeast-2.amazonaws.com
+            path: /
+
+
+kubectl get Deployment efs-provisioner -n healthcenter
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+efs-provisioner   0/1     1            0           54s
+
+```
+
+4. 설치한 Provisioner를 storageclass에 등록
+```
+kubectl apply -f efs-storageclass.yml
+
+
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: aws-efs
+  namespace: healthcenter
+provisioner: my-aws.com/aws-efs
+
+
+kubectl get sc aws-efs -n healthcenter
+NAME      PROVISIONER          RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+aws-efs   my-aws.com/aws-efs   Delete          Immediate           false                  19s
+```
+
+5. PVC(PersistentVolumeClaim) 생성
+```
+kubectl apply -f volume-pvc.yml
+
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aws-efs
+  namespace: healthcenter
+  labels:
+    app: test-pvc
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 6Ki
+  storageClassName: aws-efs
+  
+  
+kubectl get pvc aws-efs -n healthcenter
+NAME      STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+aws-efs   Pending                                      aws-efs        42s
+```
+
+6. room pod 적용
+```
+kubectl apply -f deployment.yml
+```
+![pod with pvc](https://github.com/JiHye77/AWS3_healthcenter/blob/main/refer/6%20room%20pod.JPG)
+
+
+7. A pod에서 마운트된 경로에 파일을 생성하고 B pod에서 파일을 확인함
+```
+NAME                              READY   STATUS    RESTARTS   AGE
+efs-provisioner-f4f7b5d64-lt7rz   1/1     Running   0          14m
+room-5df66d6674-n6b7n             1/1     Running   0          109s
+room-5df66d6674-pl25l             1/1     Running   0          109s
+siege                             1/1     Running   0          2d1h
+
+
+kubectl exec -it pod/room-5df66d6674-n6b7n room -n healthcenter -- /bin/sh
+/ # cd /mnt/aws
+/mnt/aws # touch intensive_course_work
+```
+![a pod에서 파일생성](https://user-images.githubusercontent.com/38099203/119372712-9736f180-bcf2-11eb-8e57-1d6e3f4273a5.PNG)
+
+```
+kubectl exec -it pod/room-5df66d6674-pl25l room -n healthcenter -- /bin/sh
+/ # cd /mnt/aws
+/mnt/aws # ls -al
+total 8
+drwxrws--x    2 root     2000          6144 May 24 15:44 .
+drwxr-xr-x    1 root     root            17 May 24 15:42 ..
+-rw-r--r--    1 root     2000             0 May 24 15:44 intensive_course_work
+```
+![b pod에서 파일생성 확인](https://user-images.githubusercontent.com/38099203/119373196-204e2880-bcf3-11eb-88f0-a1e91a89088a.PNG)
+
+
+- Config Map
+
+1: cofingmap.yml 파일 생성
+```
+kubectl apply -f configmap.yml
+
+
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: customer1
+  name: healthcenter-config
+  namespace: healthcenter
 data:
-  TEXT1: Customer1_Company
-  TEXT2: Welcomes You
-  COMPANY: Customer1 Company Technology Pct. Ltd.
-```
-  > kubectl create -f configmap.yml
-- ![configmap](https://user-images.githubusercontent.com/17754849/108792601-fd618a80-75c4-11eb-9386-3d8785979309.png)
-- 출력하는 소스는 아래의 secret에서 함께 
-
-## Secret
-- 시크릿 생성
-```
-kubectl create secret generic my-password --from-literal=password=mysqlpassword --namespace teamtwohotel
-```
-  > ![secret](https://user-images.githubusercontent.com/17754849/108868200-4f43f800-7639-11eb-8915-1999a695b85b.png)
-- 시크릿 확인
-```
-kubectl get secret my-password -o yaml
-```
-  > ![확인](https://user-images.githubusercontent.com/17754849/108868606-b8c40680-7639-11eb-8296-dfc2ad9cb4e0.png)
-- 시크릿 buildspec.yml
-  > ![소스](https://user-images.githubusercontent.com/17754849/108870840-dd20e280-763b-11eb-8e55-bfc9dc70e9e0.png)
-- 시크릿 자바 출력
-  > ![결과출력](https://user-images.githubusercontent.com/17754849/108871144-30933080-763c-11eb-8e76-453348bb7ec0.png)
-
-
-# 참고
-
-## 개발 환경 구성
-
-1. 도커 설치
-https://whitepaek.tistory.com/38
-위에 가면 도커 관련 명령어들도 있음
-
-2. 카프카 설치
-```
-https://dev-jj.tistory.com/entry/MAC-Kafka-%EB%A7%A5%EC%97%90-Kafka-%EC%84%A4%EC%B9%98-%ED%95%98%EA%B8%B0-Docker-homebrew-Apache
-https://jdm.kr/blog/208
-경로 이동 /Users/jinhyeonbak/intensive/kafka_2.12-2.3.0/bin
-주키퍼 실행
-./zookeeper-server-start.sh ../config/zookeeper.properties &
-카프카 broker 실행
-./kafka-server-start.sh ../config/server.properties ( 4 ~ 5 는 건너뛰어도 됨 )
-카프카 topic 만들기
-./kafka-topic.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic teamtwohotel
-카프카 producer 실행
-./kafka-console-poducer.sh --broker-list localhost:9092 --topic teamtwohotel
-카프카 consumer 실행
-./kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic teamtwohotel --from-beginning
-카프카 토픽 삭제 ./kafka-topics.sh --zookeeper localhost:2181 --delete --topic DummyTopic
-카프카 토픽 리스트 ./kafka-topics.sh --list --zookeeper localhost:2181
-카프카가 비정상일 때 sudo lsof -i :2181 한뒤
-kill -9 pid 하고 다시 띄워준다
+  # 단일 key-value
+  max_reservation_per_person: "10"
+  ui_properties_file_name: "user-interface.properties"
 ```
 
-3. httpie 설치
+2. deployment.yml에 적용하기
 
-4. aws cli 설치
-https://docs.aws.amazon.com/ko_kr/cli/latest/userguide/install-cliv2-mac.html
-aws configure 로 액세스 ID 등 입력
+```
+kubectl apply -f deployment.yml
 
-5. eksctl 설치
-https://docs.aws.amazon.com/ko_kr/eks/latest/userguide/getting-started-eksctl.html
 
-6. IAM 생성
-https://www.44bits.io/ko/post/publishing_and_managing_aws_user_access_key
-
-7. eksctl 생성 ( 시간이 좀 걸림 )
-클러스터 생성
-eksctl create cluster --name admin-eks --version 1.17 --nodegroup-name standard-workers --node-type t3.medium --nodes 4 --nodes-min 1 --nodes-max 4
-
-8. Local EKS 클러스터 토큰가져오기 ( CI/CD 할때 필요한건데, 앞에 설정해줘야 할 게 더 있으니 아래 쪽 CI/CD 다시 참고 )
-aws eks --region ap-northeast-2 update-kubeconfig --name admin-eks
-
-9. 아마존 컨테이너 레지스트리
-아마존 > ecr (elastic container registry) > ecr 레파지터리 : ECR은 각 배포될 이미지 대상과 이름을 맞춰준다
-aws ecr create-repository --repository-name admin-eks --region ap-northeast-2
-aws ecr put-image-scanning-configuration --repository-name admin-eks --image-scanning-configuration scanOnPush=true --region ap-northeast-2
-
-10. AWS 컨테이너 레지스트리 로그인
-aws ecr get-login-password --region (Region-Code) | docker login --username AWS --password-stdin (Account-Id).dkr.ecr.(Region-Code).amazonaws.com
-
-11. AWS 레지스트리에 도커 이미지 푸시하기 (이건 위에서 한 거랑 좀 겹치는듯)
-aws ecr create-repository --repository-name (IMAGE_NAME) --region ap-northeast-2
-docker push (Account-Id).dkr.ecr.ap-northeast-2.amazonaws.com/(IMAGE_NAME):latest
+.......
+          env:
+			# cofingmap에 있는 단일 key-value
+            - name: MAX_RESERVATION_PER_PERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: healthcenter-config
+                  key: max_reservation_per_person
+           - name: UI_PROPERTIES_FILE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: healthcenter-config
+                  key: ui_properties_file_name
+          volumeMounts:
+          - mountPath: "/mnt/aws"
+            name: volume
+      volumes:
+        - name: volume
+          persistentVolumeClaim:
+            claimName: aws-efs
+```
