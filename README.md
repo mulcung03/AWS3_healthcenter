@@ -993,7 +993,7 @@ root@labs--244363308:/home/project# kubectl autoscale deployment reservation -n 
 horizontalpodautoscaler.autoscaling/reservation autoscaled
 ```
 
-#### 부하를 동시사용자 100명, 1분 동안 걸어준다.
+#### 부하를 동시사용자 200명, 1분 동안 걸어준다.
 ```
 root@siege:/# siege –c200 -t60S -v --content-type "application/json" 'http://reservation:8080/reservations POST {"orderId": "12345"}'
 ```
@@ -1009,7 +1009,7 @@ NAME          READY   UP-TO-DATE   AVAILABLE   AGE
 reservation   1/1     1            0           4m24s
 reservation   1/4     1            0           5m12s
 reservation   1/4     1            0           5m12s
-reservation   1/4     1            0           5m12s
+reservation   2/4     1            0           5m12s
 ```
 ```
 Lifting the server siege...
@@ -1029,11 +1029,11 @@ Shortest transaction:           0.00
 
 
 ## 무정지 배포(Readiness Probe)
+- 무정지 배포전 payment서비스에 레플리카를 3개로 확장적용하고, 각 서비스의 #
 - 무정지 배포 전 payment 서비스의 STATUS 가 Running 및 1/1 인 것을 확인한다. 
 ```
 root@labs--244363308:/home/project# kubectl get pod
 NAME                           READY   STATUS             RESTARTS   AGE
-order-5884c9fc47-sgh7r         0/1     ImagePullBackOff   0          29m
 payment-555696c874-6l7wq       1/1     Running            0          5m12s
 payment-555696c874-pgxrr       1/1     Running            0          40m
 payment-555696c874-tp72c       1/1     Running            0          5m12s
@@ -1066,7 +1066,7 @@ Pod Template:
     Requests:
       cpu:        200m
     Liveness:     http-get http://:8080/actuator/health delay=120s timeout=2s period=5s #success=1 #failure=5
-    Readiness:    http-get http://:8080/actuator/health delay=10s timeout=2s period=5s #success=1 #failure=10
+    Readiness:    http-get http://:8080/actuator/health delay=10s timeout=2s period=5s #success=1 #failure=10   #<---적용됨
     Environment:  <none>
     Mounts:       <none>
   Volumes:        <none>
@@ -1109,7 +1109,7 @@ livenessProbe에 /tmp/healthy 파일이 존재하는지 재확인하는 설정�
 # kubectl describe pod reservation -n healthcenter
 ```
 ![7](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/7.PNG)
-컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 되고, pod 정상 상태 일 때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지 확인
+- 컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 되고, pod 정상 상태 일 때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지 확인
 
 ```
 # kubectl get po –n healthcenter –w
@@ -1353,9 +1353,9 @@ drwxr-xr-x    1 root     root            17 May 24 15:42 ..
 ![b pod에서 파일생성 확인](https://user-images.githubusercontent.com/38099203/119373196-204e2880-bcf3-11eb-88f0-a1e91a89088a.PNG)
 
 
-- Config Map
+#### Config Map
 
-1: cofingmap.yml 파일 생성
+1: configmap.yml 파일 생성
 ```
 kubectl apply -f configmap.yml
 
@@ -1397,4 +1397,38 @@ kubectl apply -f deployment.yml
         - name: volume
           persistentVolumeClaim:
             claimName: aws-efs
+```
+
+3. ENV 적용결과 확인 
+```
+root@labs--377686466:/home/project# kubectl exec order-574f9b746-q6fkb -it -- sh
+/ # env
+RESERVATION_SERVICE_HOST=10.100.93.168
+RESERVATION_PORT_8080_TCP_ADDR=10.100.93.168
+KUBERNETES_PORT=tcp://10.100.0.1:443
+KUBERNETES_SERVICE_PORT=443
+UI_PROPERTIES_FILE_NAME=user-interface.properties
+NOTIFICATION_PORT_8080_TCP=tcp://10.100.65.88:8080
+ORDER_PORT_80_TCP_ADDR=10.100.61.51
+JAVA_ALPINE_VERSION=8.212.04-r0
+HOSTNAME=order-574f9b746-q6fkb
+RESERVATION_PORT_8080_TCP_PORT=8080
+RESERVATION_PORT_8080_TCP_PROTO=tcp
+SHLVL=1
+ORDER_PORT_80_TCP_PORT=80
+HOME=/root
+ORDER_PORT_80_TCP_PROTO=tcp
+RESERVATION_SERVICE_PORT=8080
+RESERVATION_PORT=tcp://10.100.93.168:8080
+PAYMENT_SERVICE_HOST=10.100.208.81
+PAYMENT_PORT_8080_TCP_ADDR=10.100.208.81
+RESERVATION_PORT_8080_TCP=tcp://10.100.93.168:8080
+JAVA_VERSION=8u212
+ORDER_PORT_80_TCP=tcp://10.100.61.51:80
+PAYMENT_PORT_8080_TCP_PORT=8080
+PAYMENT_PORT_8080_TCP_PROTO=tcp
+TERM=xterm
+MAX_RESERVATION_PER_PERSION=10                                #<--- 적용
+PAYMENT_SERVICE_PORT=8080
+KUBERNETES_PORT_443_TCP_ADDR=10.100.0.1
 ```
