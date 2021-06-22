@@ -880,9 +880,13 @@ kubectl get deployment
 ##### 마이크로서비스 동작 테스트
 ###### 포트 포워딩
 kubectl port-forward deploy/order 8081:8080
+
 kubectl port-forward deploy/payment 8083:8080
+
 kubectl port-forward deploy/reservation 8082:8080
+
 kubectl port-forward deploy/notification 8084:8080
+
 ###### 서비스 확인
 ```sh
 root@labs--377686466:/home/project# http http://localhost:8081/orders
