@@ -1335,22 +1335,20 @@ order-574f9b746-pl25l             1/1     Running   0          109s
 siege                             1/1     Running   0          2d1h
 
 
-kubectl exec -it pod/room-5df66d6674-n6b7n room -n healthcenter -- /bin/sh
+kubectl exec -it pod/order-574f9b746-q6fkb order -n healthcenter -- /bin/sh
 / # cd /mnt/aws
-/mnt/aws # touch intensive_course_work
+/mnt/aws # touch final_test
 ```
-![a pod에서 파일생성](https://user-images.githubusercontent.com/38099203/119372712-9736f180-bcf2-11eb-8e57-1d6e3f4273a5.PNG)
 
 ```
-kubectl exec -it pod/room-5df66d6674-pl25l room -n healthcenter -- /bin/sh
+kubectl exec -it pod/order-574f9b746-pl25l order -n healthcenter -- /bin/sh
 / # cd /mnt/aws
 /mnt/aws # ls -al
 total 8
-drwxrws--x    2 root     2000          6144 May 24 15:44 .
-drwxr-xr-x    1 root     root            17 May 24 15:42 ..
--rw-r--r--    1 root     2000             0 May 24 15:44 intensive_course_work
+drwxrws--x    2 root     2000          6144 Jun 21 00:22 .
+drwxr-xr-x    1 root     root            17 Jun 21 00:22 ..
+-rw-r--r--    1 root     2000             0 Jun 21 01:31 final_test
 ```
-![b pod에서 파일생성 확인](https://user-images.githubusercontent.com/38099203/119373196-204e2880-bcf3-11eb-88f0-a1e91a89088a.PNG)
 
 
 #### Config Map
