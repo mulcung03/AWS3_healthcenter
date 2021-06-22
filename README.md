@@ -302,7 +302,7 @@ http localhost:8081/orders orderType=basic
 # pay 서비스의 결제처리
 http localhost:8083/paymentHistories orderId=1 price=50000 payMethod=card
 
-# hotel 서비스의 예약처리
+# reservation 서비스의 예약처리
 http localhost:8082/reservations orderId=1 status="confirmed"
 
 # 주문 상태 확인(mypage)
@@ -516,7 +516,7 @@ Transfer-Encoding: chunked
 ```
 #PaymentHistory.java
 
-package hotel;
+package healthcenter;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
@@ -537,14 +537,13 @@ public class PaymentHistory {
 ```
 
 - 예약서비스에서는 결제승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다.
-- 카톡/이메일 등으로 호텔은 노티를 받고, 예약 상황을 확인 하고, 최종 예약 상태를 UI에 입력할테니, 우선 예약정보를 DB에 받아놓은 후, 이후 처리는 해당 Aggregate 내에서 하면 되겠다.
 
 ```
 # (reservation) PolicyHandler.java
 
 package healthcenter;
 
-import hotel.config.kafka.KafkaProcessor;
+import healthcenter.config.kafka.KafkaProcessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
