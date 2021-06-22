@@ -1028,7 +1028,9 @@ horizontalpodautoscaler.autoscaling/reservation autoscaled
 root@siege:/# siege –c200 -t60S -v --content-type "application/json" 'http://reservation:8080/reservations POST {"orderId": "12345"}'
 ```
 •	오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
+```
 # kubectl get deploy reservation -w -n healthcenter
+```
 
 •	어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다
 ```
