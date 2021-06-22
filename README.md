@@ -1029,8 +1029,8 @@ Shortest transaction:           0.00
 
 
 ## 무정지 배포(Readiness Probe)
-- 무정지 배포전 payment서비스에 레플리카를 3개로 확장적용하고, 각 서비스의 #
-- 무정지 배포 전 payment 서비스의 STATUS 가 Running 및 1/1 인 것을 확인한다. 
+
+- 무정지 배포전 payment 서비스의 replic를 3개로 확장하고 각 서비스의 STATUS가 Running 및 1/1 인 것을 확인한다.
 ```
 root@labs--244363308:/home/project# kubectl get pod
 NAME                           READY   STATUS             RESTARTS   AGE
@@ -1271,7 +1271,7 @@ spec:
 
 kubectl get Deployment efs-provisioner -n healthcenter
 NAME              READY   UP-TO-DATE   AVAILABLE   AGE
-efs-provisioner   0/1     1            0           54s
+efs-provisioner   1/1     1            1           24s
 
 ```
 
@@ -1315,11 +1315,11 @@ spec:
   
   
 kubectl get pvc aws-efs -n healthcenter
-NAME      STATUS    VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-aws-efs   Pending                                      aws-efs        42s
+NAME      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+aws-efs   Bound    pvc-ed77965e-80ac-4a6a-b721-1e54a867f2e6   6Ki        RWX            aws-efs        142m
 ```
 
-6. room pod 적용
+6. order pod 적용
 ```
 kubectl apply -f deployment.yml
 ```
@@ -1330,8 +1330,8 @@ kubectl apply -f deployment.yml
 ```
 NAME                              READY   STATUS    RESTARTS   AGE
 efs-provisioner-f4f7b5d64-lt7rz   1/1     Running   0          14m
-room-5df66d6674-n6b7n             1/1     Running   0          109s
-room-5df66d6674-pl25l             1/1     Running   0          109s
+order-574f9b746-q6fkb             1/1     Running   0          109s
+order-574f9b746-pl25l             1/1     Running   0          109s
 siege                             1/1     Running   0          2d1h
 
 
