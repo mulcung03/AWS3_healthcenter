@@ -44,11 +44,11 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
     - [SAGA-CQRS](#마이페이지)   
     -                      
   - [운영](#운영)
-    - [CI/CD 설정](#cicd-설정)
-    - [Self Healing(Liveness Probe)](#Self-Healing(Liveness-Probe)) 
+    - [CI/CD 설정](#cicd-설정) 
     - [동기식 호출 / Circuit Breaker](#동기식-호출--Circuit-Breaker) 
     - [오토스케일 아웃](#오토스케일-아웃)
     - [무정지 재배포(Readiness Probe)](#무정지-배포(Readiness-Probe))
+    - [Self Healing(Liveness Probe)](#Self-Healing(Liveness-Probe))
     - [ConfigMap / Persistence Volume](#Configmap) 
 
 
@@ -755,12 +755,10 @@ server:
   port: 8080
 
 ```
-
+## 마이페이지
 # CQRS
 - 고객이 예약건에 대한 Status를 조회할 수 있도록 CQRS로 구현하였음.
 -  mypage 조회를 통해 모든 예약건에 대한 상태정보를 확인할 수 있음.
-
-## 마이페이지
 
 고객의 예약정보를 한 눈에 볼 수 있게 mypage를 구현 한다.(CQRS)
 
@@ -1142,6 +1140,7 @@ kubectl set image deploy order order=새로운 이미지 버전
 #### siege로 무중단 확인
 ![image](https://user-images.githubusercontent.com/17021291/108806577-6f49cc00-75e5-11eb-99c8-8904c9995186.png)
 
+## Self Healing(Liveness Probe)
 
 ## Configmap
 - configmap 생성  
