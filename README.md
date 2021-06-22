@@ -842,13 +842,15 @@ kubectl create -f deployment.yml
 ```sh
 kubectl get pods
 ```
-![ysjung02.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung02.png)
+![ysjung02.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung02.png) 
+--> 이미지 에러..수정필요(READY 1/1)
 
 
 ```sh
 kubectl get deployment
 ```
-![ysjung01.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung01.png)
+![ysjung01.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung01.png)  
+--> 이미지 에러..수정필요(available 뜬것 확인)
 
 
 ##### 마이크로서비스 동작 테스트
@@ -929,6 +931,9 @@ hystrix:
 - 동시사용자 100명
 - 60초 동안 실시
 
+
+--> 수정필요 siege옵션에 -v옵션 추가해서 처리해야함.
+임계치 300을 적용했을 때, 확인이 되려면 -v 옵션으로 했어야 함.
 ```
 siege -c100 -t60S -r10 --content-type "application/json" 'http://localhost:8081/orders POST {"orderId": "11", "orderType": "prime"}'
 
@@ -1060,6 +1065,7 @@ Events:          <none>
 
 
 ![3](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/3.PNG)
+
 충분한 시간만큼 부하를 주고,
 그 사이 새로운 image 를 반영후 deployment.yml을 배포
 Siege 로그를 보면서 배포 시 무정지로 배포되는 것을 확인.
@@ -1068,7 +1074,7 @@ root@siege:/# siege -c1 -t60S -v http://payment:8080/payment   ==> 60초 설정
 ```
 ![4](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/4.PNG)
 ![5](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/5.PNG)
-
+--> 수정필요. paymentHistory로 해서 날린걸로 변경했어야함. not found증적임. 
 
 
 ## Self Healing(Liveness Probe)
