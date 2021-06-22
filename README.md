@@ -1412,3 +1412,5 @@ MAX_RESERVATION_PER_PERSION=10                                #<--- 적용
 PAYMENT_SERVICE_PORT=8080
 KUBERNETES_PORT_443_TCP_ADDR=10.100.0.1
 ```
+
+--> 수정필요. 해당 설정을 마이크로서비스에서 활용하여 로그라도 찍었어야 함..
