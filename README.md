@@ -45,7 +45,7 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
     - [SAGA-CQRS](#마이페이지)   
     -                      
   - [운영](#운영)
-    - [CI/CD 설정](#cicd-설정) 
+    - 컨테이너 이미지 생성 및 배포(#컨테이너-이미지-생성-및-배포) 
     - [동기식 호출 / Circuit Breaker](#동기식-호출--Circuit-Breaker) 
     - [오토스케일 아웃](#오토스케일-아웃)
     - [무정지 재배포(Readiness Probe)](#무정지-배포(Readiness-Probe))
@@ -825,204 +825,91 @@ Transfer-Encoding: chunked
 ```
 # 운영
 
-## CI/CD 설정
-- 환경변수 준비  
-<details markdown="1">
-<summary>환경변수 설정 접기/펼치기</summary>
-AWS_ACCOUNT_ID KUBE URL : EKS -> 클러스터 -> 구성 "세부정보"의 "API 엔드포인트 URL" CodeBuild 와 EKS 연결
+## 컨테이너 이미지 생성 및 배포
 
+###### ECR 접속 비밀번호 생성
+```sh
+aws --region "ap-northeast-2" ecr get-login-password
 ```
-1. eks-admin-service-account.yaml 파일 생성하여 sa 생성
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: eks-admin
-  namespace: kube-system
-  
-2. kubectl apply -f eks-admin-service-account.yaml
-혹은, 바로 적용도 가능함
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: eks-admin
-  namespace: kube-system
-EOF
-
-3. eks-admin-cluster-role-binding.yaml 파일 생성하여 롤바인딩
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: eks-admin
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: eks-admin
-  namespace: kube-system
-  
-4. kubectl apply -f eks-admin-cluster-role-binding.yaml
-혹은, 바로 적용도 가능함
-cat <<EOF | kubectl apply -f -
-apiVersion: rbac.authorization.k8s.io/v1beta1
-kind: ClusterRoleBinding
-metadata:
-  name: eks-admin
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-- kind: ServiceAccount
-  name: eks-admin
-  namespace: kube-system
-EOF
+###### ECR 로그인
+```sh
+docker login --username AWS -p {ECR 접속 비밀번호} 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com
+Login Succeeded
 ```
-
-만들어진 eks-admin SA 의 토큰 가져오기
-kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep eks-admin | awk '{print $1}')
-KUBE TOKEN 가져오기
-:
-
-Code build와 ECR 연결 정책 설정 : code build -> 빌드 프로젝트 생성
-<img width="1029" src=https://user-images.githubusercontent.com/17754849/108522319-0e35a600-7310-11eb-8d63-f32cf0651e0a.png>
-<img width="1029" src=https://user-images.githubusercontent.com/17754849/108524004-ed6e5000-7311-11eb-831d-e6fca77ab59e.png>
-<img width="400" src=https://user-images.githubusercontent.com/17754849/108524571-843b0c80-7312-11eb-968a-9d14b182afb8.png>
-
-그리고 다시 뒷 내용은 "3. CICD-Pipeline_AWS_v2" pdf 자료 39페이지부터 (이미지가 많은 관계로, buildspec.yml 작성하기)
-
-환경 변수  
-<img width="600" src=https://user-images.githubusercontent.com/17754849/108938749-fce3f500-7693-11eb-8fca-8090f2527dfa.png>
+###### 마이크로서비스 빌드, order/payment/reservation/notification 각각 실행
+```sh
+mvn clean package -B
 ```
-{ "Action": [
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:CompleteLayerUpload",
-      "ecr:GetAuthorizationToken",
-      "ecr:InitiateLayerUpload",
-      "ecr:PutImage",
-      "ecr:UploadLayerPart"
-    ],
-    "Resource": "*",
-    "Effect": "Allow"
+###### 컨테이너 이미지 생성
+- docker build -t 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/order:v1 .
+- docker build -t 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/payment:v1 .
+- docker build -t 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:v1 .
+- docker build -t 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/notification:v1 .
+![ysjung05.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung05.png)
+![ysjung06.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung06.png)
+###### ECR에 컨테이너 이미지 배포
+- docker push 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/order:v1
+- docker push 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/payment:v1
+- docker push 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:v1
+- docker push 740569282574.dkr.ecr.ap-northeast-2.amazonaws.com/notification:v1
+![ysjung03.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung03.png)
+![ysjung04.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung04.png)
+
+###### 네임스페이스 healthcenter 생성 및 이동
+```sh
+kubectl create namespace healthcenter
+kubectl config set-context --current --namespace=healthcenter
+```
+###### EKS에 마이크로서비스 배포, order/payment/reservation/notification 각각 실행
+```sh
+kubectl create -f deployment.yml 
+```
+###### 마이크로서비스 배포 상태 확인
+```sh
+kubectl get pods
+![ysjung02.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung02.png)
+```
+```sh
+kubectl get deployment
+![ysjung01.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung01.png)
+```
+##### 마이크로서비스 동작 테스트
+###### 포트 포워딩
+kubectl port-forward deploy/order 8081:8080
+kubectl port-forward deploy/payment 8083:8080
+kubectl port-forward deploy/reservation 8082:8080
+kubectl port-forward deploy/notification 8084:8080
+###### 서비스 확인
+```sh
+root@labs--377686466:/home/project# http http://localhost:8081/orders
+HTTP/1.1 200 
+Content-Type: application/hal+json;charset=UTF-8
+Date: Tue, 22 Jun 2021 01:38:32 GMT
+Transfer-Encoding: chunked
+
+{
+    "_embedded": {
+        "orders": []
+    },
+    "_links": {
+        "profile": {
+            "href": "http://localhost:8081/profile/orders"
+        },
+        "self": {
+            "href": "http://localhost:8081/orders{?page,size,sort}",
+            "templated": true
+        }
+    },
+    "page": {
+        "number": 0,
+        "size": 20,
+        "totalElements": 0,
+        "totalPages": 0
+    }
 }
 ```
 
-Codebuild cache 적용 : CICD PDF p.45, S3 만들고 설정해야 함
-buildspec.yml에 aws eks --region $AWS_DEFAULT_REGION update-kubeconfig --name $_EKS 이거 넣어줘야 하는데 권한 에러 날 경우
 
-https://stackoverflow.com/questions/56011492/accessdeniedexception-creating-eks-cluster-user-is-not-authorized-to-perform 상세 내용은 buildspec.yml과 코드빌드의 환경변수 확인하면 됨
-</details>
-
-- CI/CD 적용 및 빌드 성공 결과  
-<img width="700" src=https://user-images.githubusercontent.com/17754849/108810818-5219fb00-75ef-11eb-9fe4-9ae4e2a4e8d7.png>
-- Buildspec.yml
-
-```
-version: 0.2
-
-env: 
-  variables:
-    _PROJECT_NAME: "teamtwohotel2-order"
-    _DIR_NAME: "order"
-    _EKS: "teamtwohotel2"
-    _NAMESPACE: "teamtwohotel"
-
-phases:
-  install:
-    runtime-versions:
-      java: openjdk8
-      docker: 18
-    commands:
-  pre_build:
-    commands:
-      - echo Logging in to Amazon ECR...
-      - echo $_PROJECT_NAME
-      - echo $AWS_ACCOUNT_ID
-      - echo $AWS_DEFAULT_REGION
-      - echo $CODEBUILD_RESOLVED_SOURCE_VERSION
-      - echo start command
-      - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
-  build:
-    commands:
-      - echo Build started on `date`
-      - echo Building the Docker image...
-      - cd $_DIR_NAME && mvn package -Dmaven.test.skip=true
-      - ls -al
-      - pwd
-      - docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$IMAGE_TAG .
-  post_build:
-    commands:
-      - echo Pushing the Docker image...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$IMAGE_TAG
-      - echo connect kubectl
-      - kubectl config set-cluster k8s --server="$KUBE_URL" --insecure-skip-tls-verify=true
-      - kubectl config set-credentials admin --token="$KUBE_TOKEN"
-      - kubectl config set-context default --cluster=k8s --user=admin
-      - kubectl config use-context default
-      - |
-          cat <<EOF | kubectl apply -f -
-          apiVersion: v1
-          kind: Service
-          metadata:
-            name: $_DIR_NAME
-            namespace: $_NAMESPACE
-            labels:
-              app: $_DIR_NAME
-          spec:
-            ports:
-              - port: 8080
-                targetPort: 8080
-            selector:
-              app: $_DIR_NAME
-          EOF
-      - |
-          cat  <<EOF | kubectl apply -f -
-          apiVersion: apps/v1
-          kind: Deployment
-          metadata:
-            name: $_DIR_NAME
-            namespace: $_NAMESPACE
-            labels:
-              app: $_DIR_NAME
-          spec:
-            replicas: 1
-            selector:
-              matchLabels:
-                app: $_DIR_NAME
-            template:
-              metadata:
-                labels:
-                  app: $_DIR_NAME
-              spec:
-                containers:
-                  - name: $_DIR_NAME
-                    image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$_PROJECT_NAME:$IMAGE_TAG
-                    imagePullPolicy: Always
-                    ports:
-                      - containerPort: 8080
-                    readinessProbe:
-                      httpGet:
-                        path: /actuator/health
-                        port: 8080
-                      initialDelaySeconds: 10
-                      timeoutSeconds: 2
-                      periodSeconds: 5
-                      failureThreshold: 10
-                    livenessProbe:
-                      httpGet:
-                        path: /actuator/health
-                        port: 8080
-                      initialDelaySeconds: 120
-                      timeoutSeconds: 2
-                      periodSeconds: 5
-                      failureThreshold: 5
-          EOF
-cache:
-  paths:
-    - '/root/.m2/**/*'
-```
 
 ## 동기식 호출 / Circuit Breaker
 
