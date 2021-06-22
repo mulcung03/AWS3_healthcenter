@@ -867,12 +867,16 @@ kubectl create -f deployment.yml
 ###### 마이크로서비스 배포 상태 확인
 ```sh
 kubectl get pods
-![ysjung02.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung02.png)
 ```
+![ysjung02.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung02.png)
+
+
 ```sh
 kubectl get deployment
-![ysjung01.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung01.png)
 ```
+![ysjung01.png](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/ysjung01.png)
+
+
 ##### 마이크로서비스 동작 테스트
 ###### 포트 포워딩
 kubectl port-forward deploy/order 8081:8080
