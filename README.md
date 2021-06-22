@@ -14,19 +14,19 @@ Final Project AWS 3차수 - 1팀 제출자료입니다.
 
 5.Gateway
 
-**6.Deploy/ Pipeline**
+6.Deploy/ Pipeline -정연식
 
-7.Circuit Breaker
+7.Circuit Breaker --진행필요
 
-8.Autoscale (HPA)
+8.Autoscale (HPA) --임문희(완료)
 
-9.Zero-downtime deploy (Readiness Probe)
+9.Zero-downtime deploy (Readiness Probe) --임문희(완료)
 
-10.Config Map/ Persistence Volume
+10.Config Map/ Persistence Volume --이지혜(진행중)
 
 11.Polyglot
 
-12.Self-healing(Liveness Probe)
+12.Self-healing(Liveness Probe)   -- 임문희
 
 
 # Table of contents
