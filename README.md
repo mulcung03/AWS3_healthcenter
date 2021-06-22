@@ -1011,10 +1011,9 @@ defaulting to time-based testing: 60 seconds
 - 80.34% 성공, 19.66% 실패
 
 ## 오토스케일 아웃
------------------------
 -앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
 •	reservation deployment.yml 파일에 resources 설정을 추가한다 
-![1]()
+![1](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/1.PNG)
 •	payment 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 
 설정은 CPU 사용량이 50프로를 넘어서면 replica 를 10개까지 늘려준다:
 kubectl autoscale deployment reservation -n healthcenter --cpu-percent=50 --min=1 --max=10
@@ -1056,7 +1055,6 @@ Longest transaction:            0.41
 Shortest transaction:           0.00
 ```
 
---------------
 
 ## 무정지 배포(Readiness Probe)
 - 무정지 배포 전 payment 서비스의 STATUS 가 Running 및 1/1 인 것을 확인한다. 
@@ -1070,6 +1068,7 @@ payment-555696c874-tp72c       1/1     Running            0          5m12s
 reservation-65ff4b4974-sbbm6   1/1     Running            0          31m
 ```
 #### Readiness 설정 
+![2](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/2.PNG)
 -	Readiness 설정 내용 확인
 ```
 root@labs--244363308:/home/project# kubectl describe deploy payment -n healthcenter
@@ -1111,16 +1110,17 @@ Events:          <none>
 
 #### 부하테스트 siege pod 설치 및 실행
 
-![2]()
 
+![3](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/3.PNG)
 충분한 시간만큼 부하를 주고,
 그 사이 새로운 image 를 반영후 deployment.yml을 배포
 Siege 로그를 보면서 배포 시 무정지로 배포되는 것을 확인.
-
+```
 root@siege:/# siege -c1 -t60S -v http://payment:8080/payment   ==> 60초 설정
-![3]()
-![4]()
---------------
+```
+![4](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/4.PNG)
+![5](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/5.PNG)
+
 
 
 ## Self Healing(Liveness Probe)
@@ -1130,13 +1130,13 @@ livenessProbe에 /tmp/healthy 파일이 존재하는지 재확인하는 설정�
 - 파일이 존재하지 않을 경우, 정상 작동에 문제가 있다고 판단되어 kubelet에 의해 자동으로 컨테이너가 재시작
 
 #### reservation deployment.yml 파일 수정
-![5]()
+
+![6](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/6.PNG)
 #### 설정 수정된 상태 확인
 ```
 # kubectl describe pod reservation -n healthcenter
 ```
-![6]()
-
+![7](https://github.com/mulcung03/AWS3_healthcenter/blob/main/refer/7.PNG)
 컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 되고, pod 정상 상태 일 때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지 확인
 
 ```
