@@ -37,7 +37,7 @@ spec:
     image: nginx
 declarative-pod.yaml로 저장
 kubectl create -f declarative-pod.yaml
-# 동일한 yaml 을 apply 명령으로도 실행
+##### 동일한 yaml 을 apply 명령으로도 실행
 kubectl apply -f declarative-pod.yaml
 객체 삭제하기
 kubectl delete [객체 타입/객체 이름]
